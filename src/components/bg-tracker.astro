@@ -1,0 +1,70 @@
+---
+
+---
+
+<img
+  id="bg-frame"
+  class="min-h-screen min-w-screen object-cover object-bottom fixed inset-0 -z-10"
+  src="/img/frames/frame1.png"
+/>
+
+<div
+  id="frame-label"
+  class="fixed bottom-24 h-8 w-32 flex items-center justify-center bg-green-800/20 rounded-xl z-20 pointer-events-none transform -translate-x-1/2"
+>
+  frame1.png
+</div>
+
+<script>
+  const bgImage = document.getElementById("bg-frame");
+  const cursorLabel = document.getElementById("frame-label");
+  const margin = 16;
+  const totalFrames = 14;
+
+  // Preload frames for smooth playback
+  for (let i = 1; i <= totalFrames; i++) {
+    const img = new Image();
+    img.src = `/img/frames/frame${i}.png`;
+  }
+
+  let rafScheduled = false;
+
+  window.addEventListener("mousemove", (e) => {
+    if (rafScheduled) return;
+    rafScheduled = true;
+
+    requestAnimationFrame(() => {
+      const screenWidth = window.innerWidth;
+      const mouseX = e.clientX;
+
+      // Calculate which of the 14 columns the cursor is in
+      let colIndex = Math.floor((mouseX / screenWidth) * totalFrames);
+      if (colIndex < 0) colIndex = 0;
+      if (colIndex >= totalFrames) colIndex = totalFrames - 1;
+
+      const frameNum = colIndex + 1;
+      const fileName = `frame${frameNum}.png`;
+
+      // Update image source if needed
+      if (bgImage) {
+        const newSrc = `/img/frames/${fileName}`;
+        if (bgImage.getAttribute("src") !== newSrc) {
+          bgImage.setAttribute("src", newSrc);
+        }
+      }
+
+      // Update label position and text
+      if (cursorLabel) {
+        cursorLabel.textContent = `Look ${frameNum}`;
+        const maxLeft = screenWidth - cursorLabel.offsetWidth / 2 - margin;
+        const clampedX = Math.max(
+          0 + cursorLabel.offsetWidth / 2 + margin,
+          Math.min(mouseX, maxLeft),
+        );
+        cursorLabel.style.left = `${clampedX}px`;
+      }
+
+      rafScheduled = false;
+    });
+  });
+</script>
