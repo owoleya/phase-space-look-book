@@ -1,34 +1,78 @@
 ---
+import { getImage } from "astro:assets";
 
+const imageFiles = import.meta.glob<{ default: ImageMetadata }>(
+  "/src/assets/frames/*.png",
+);
+
+const sortedKeys = Object.keys(imageFiles).sort((a, b) => {
+  const numA = parseInt(a.match(/frame(\d+)\.png$/)?.[1] || "0", 10);
+  const numB = parseInt(b.match(/frame(\d+)\.png$/)?.[1] || "0", 10);
+  return numA - numB;
+});
+
+const optimizedImages = await Promise.all(
+  sortedKeys.map(async (key) => {
+    const { default: img } = await imageFiles[key]();
+    const optimized = await getImage({ src: img, format: "webp" });
+    return optimized.src;
+  }),
+);
 ---
 
-<img
-  id="bg-frame"
-  class="h-screen min-w-screen object-cover object-bottom fixed inset-0 -z-10"
-  src="/img/frames/frame1.png"
-/>
+{
+  optimizedImages.map((src, index) => (
+    <link
+      rel="preload"
+      as="image"
+      href={src}
+      fetchpriority={index < 2 ? "high" : "low"}
+    />
+  ))
+}
+<div
+  id="bg-tracker-data"
+  data-images={JSON.stringify(optimizedImages)}
+  class="hidden"
+>
+</div>
+
+<div id="bg-frame" class="h-screen w-screen relative overflow-hidden z-0">
+  <div id="bg-wrapper" class="absolute h-full">
+    <img id="bg-image" class="h-full min-w-fit" src={optimizedImages[0]} />
+  </div>
+</div>
 
 <div
   id="frame-label"
-  class="fixed bottom-24 h-8 w-32 flex items-center justify-center bg-green-800/20 rounded-xl z-20 pointer-events-none transform -translate-x-1/2"
+  style="left: 50%"
+  class="fixed bottom-24 h-8 w-32 flex items-center gap-2 justify-center bg-green-800/20 rounded-xl z-20 pointer-events-none transform max-@3xl:left-1/2 -translate-x-1/2"
 >
-  frame1.png
+  Drag around
 </div>
 
 <script>
-  const bgImage = document.getElementById("bg-frame");
-  const cursorLabel = document.getElementById("frame-label");
-  const margin = 16;
-  const totalFrames = 14;
+  import { gsap } from "gsap";
+  import { Draggable } from "gsap/Draggable";
 
-  // Preload frames for smooth playback
-  for (let i = 1; i <= totalFrames; i++) {
-    const img = new Image();
-    img.src = `/img/frames/frame${i}.png`;
-  }
+  gsap.registerPlugin(Draggable);
+
+  console.log(Draggable);
+
+  const bgFrame = document.getElementById("bg-frame");
+  const bgWrapper = document.getElementById("bg-wrapper");
+  const bgImage = document.getElementById("bg-image");
+  const cursorLabel = document.getElementById("frame-label");
+  const dataEl = document.getElementById("bg-tracker-data");
+
+  const optimizedImages = dataEl
+    ? JSON.parse(dataEl.dataset.images || "[]")
+    : [];
+  const margin = 16;
+  const totalFrames = optimizedImages.length || 14;
 
   // --- 1. Swap Frames & Badge Label ---
-  const updateLook = (pointerX: number) => {
+  const updateLook = (pointerX: number, isMobile: boolean) => {
     const screenWidth = window.innerWidth;
 
     // Calculate which of the 14 columns the pointer is in
@@ -37,12 +81,15 @@
     if (colIndex >= totalFrames) colIndex = totalFrames - 1;
 
     const frameNum = colIndex + 1;
-    const fileName = `frame${frameNum}.png`;
 
-    // Update image source if needed
-    if (bgImage) {
-      const newSrc = `/img/frames/${fileName}`;
-      if (bgImage.getAttribute("src") !== newSrc) {
+    // Update image source using the optimized URLs array
+    if (bgImage && optimizedImages.length > 0) {
+      const newSrc = optimizedImages[colIndex];
+      // Only update if source has changed
+      if (
+        bgImage.getAttribute("src") !== newSrc &&
+        (bgImage as HTMLImageElement).src !== newSrc
+      ) {
         bgImage.setAttribute("src", newSrc);
       }
     }
@@ -50,25 +97,98 @@
     // Update label position and text
     if (cursorLabel) {
       cursorLabel.textContent = `Look ${frameNum}`;
-      const maxLeft = screenWidth - cursorLabel.offsetWidth / 2 - margin;
-      const clampedX = Math.max(
-        0 + cursorLabel.offsetWidth / 2 + margin,
-        Math.min(pointerX, maxLeft),
-      );
-      cursorLabel.style.left = `${clampedX}px`;
+
+      // Only track X position if we are not on mobile
+      if (!isMobile) {
+        const maxLeft = screenWidth - cursorLabel.offsetWidth / 2 - margin;
+        const clampedX = Math.max(
+          0 + cursorLabel.offsetWidth / 2 + margin,
+          Math.min(pointerX, maxLeft),
+        );
+        cursorLabel.style.left = `${clampedX}px`;
+      } else {
+        // Reset left inline style so Tailwind max-@3xl overrides apply correctly
+        cursorLabel.style.left = "50%";
+      }
     }
   };
 
-  // --- 2. Cursor Tracker ---
+  // --- 2. Interaction Logic Desktop ---
   let rafScheduled = false;
+  let isMobileView = window.matchMedia("(max-width: 768px)").matches;
 
-  window.addEventListener("mousemove", (e) => {
-    if (rafScheduled) return;
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isMobileView || rafScheduled) return;
     rafScheduled = true;
-
     requestAnimationFrame(() => {
-      updateLook(e.clientX);
+      updateLook(e.clientX, false);
       rafScheduled = false;
     });
+  };
+
+  // Set up GSAP Draggable for mobile
+  let draggableInstance: Draggable[] = [];
+
+  function initDraggable() {
+    if (!bgImage || !bgWrapper || !bgFrame) return;
+
+    // Kill existing instance on re-init (e.g. resize)
+    if (draggableInstance.length) {
+      draggableInstance[0].kill();
+    }
+
+    const containerWidth = bgFrame.offsetWidth;
+    const imageWidth = (bgImage as HTMLImageElement).offsetWidth;
+    const minX = Math.min(0, containerWidth - imageWidth);
+
+    draggableInstance = Draggable.create(bgWrapper, {
+      type: "x",
+      //   inertia: true,
+      bounds: {
+        minX: minX,
+        maxX: 0,
+        minY: 0,
+        maxY: 0,
+      },
+      //   edgeResistance: 0.85,
+      onDrag: function () {
+        // Map drag position to a 0..screenWidth range for frame lookup
+        const progress = minX === 0 ? 0 : this.x / minX; // 0 at maxX, 1 at minX
+        const pointerX = progress * window.innerWidth;
+        updateLook(pointerX, true);
+      },
+    });
+  }
+
+  // Wait for image to load so dimensions are known
+  if (bgImage) {
+    if ((bgImage as HTMLImageElement).complete) {
+      initDraggable();
+    } else {
+      bgImage.addEventListener("load", initDraggable);
+    }
+    window.addEventListener("resize", initDraggable);
+  }
+
+  // Toggle behavior based on screen size
+  const mql = window.matchMedia("(max-width: 768px)");
+  const handleResize = (e: MediaQueryListEvent | MediaQueryList) => {
+    isMobileView = e.matches;
+
+    // Reset view states depending on transition
+    if (isMobileView) {
+      console.log(draggableInstance);
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (draggableInstance) draggableInstance[0].enable();
+    } else {
+      window.addEventListener("mousemove", handleMouseMove);
+      if (draggableInstance) draggableInstance[0].disable();
+    }
+  };
+
+  // Init
+  document.addEventListener("astro:page-load", () => {
+    mql.addEventListener("change", handleResize);
+    handleResize(mql);
   });
 </script>
