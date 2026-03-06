@@ -37,8 +37,8 @@ const optimizedImages = await Promise.all(
 >
 </div>
 
-<div class="w-full flex relative z-0">
-  <div id="bg-frame" class="h-screen w-full relative overflow-hidden">
+<div class="w-full h-svh flex relative z-0">
+  <div id="bg-frame" class="h-full w-full relative overflow-hidden">
     <div id="bg-wrapper" class="absolute h-full">
       <img id="bg-image" class="h-full min-w-fit" src={optimizedImages[0]} />
     </div>
@@ -71,11 +71,12 @@ const optimizedImages = await Promise.all(
     ? JSON.parse(dataEl.dataset.images || "[]")
     : [];
   const margin = 16;
-  const totalFrames = optimizedImages.length || 14;
+  const totalFrames = optimizedImages.length || 13;
 
   // --- 1. Swap Frames & Badge Label ---
   const updateLook = (pointerX: number, isMobile: boolean) => {
     const screenWidth = window.innerWidth;
+    // console.log("updateLook", { pointerX, isMobile, screenWidth });
 
     // Calculate which of the 14 columns the pointer is in
     let colIndex = Math.floor((pointerX / screenWidth) * totalFrames);
