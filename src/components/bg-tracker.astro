@@ -1,20 +1,18 @@
 ---
+import { getCollection } from "astro:content";
 import { getImage } from "astro:assets";
 
-const imageFiles = import.meta.glob<{ default: ImageMetadata }>(
-  "/src/assets/frames/*.png",
-);
+const frames = await getCollection("frames");
 
-const sortedKeys = Object.keys(imageFiles).sort((a, b) => {
-  const numA = parseInt(a.match(/frame(\d+)\.png$/)?.[1] || "0", 10);
-  const numB = parseInt(b.match(/frame(\d+)\.png$/)?.[1] || "0", 10);
+const sortedFrames = frames.sort((a, b) => {
+  const numA = parseInt(a.id.match(/frame(\d+)$/)?.[1] || "0", 10);
+  const numB = parseInt(b.id.match(/frame(\d+)$/)?.[1] || "0", 10);
   return numA - numB;
 });
 
 const optimizedImages = await Promise.all(
-  sortedKeys.map(async (key) => {
-    const { default: img } = await imageFiles[key]();
-    const optimized = await getImage({ src: img, format: "webp" });
+  sortedFrames.map(async (frame) => {
+    const optimized = await getImage({ src: frame.data.frame, format: "webp" });
     return optimized.src;
   }),
 );
