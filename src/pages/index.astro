@@ -1,6 +1,7 @@
 ---
 import "../styles/main.css";
 import BgTracker from "../components/bg-tracker.astro";
+import FriendsTracker from "../components/friends-tracker.astro";
 ---
 
 <html lang="en">
@@ -29,10 +30,42 @@ import BgTracker from "../components/bg-tracker.astro";
     <meta name="generator" content={Astro.generator} />
     <script src="//unpkg.com/alpinejs" defer></script>
     <title>Phase Space Look Book!!!!!!!</title>
+    <style>
+      [x-cloak] {
+        display: none !important;
+      }
+    </style>
   </head>
-  <body>
-    <BgTracker />
-    <h1 class="text-3xl fixed top-4 left-4 z-10">
+  <body x-data="{ view: 'friends' }">
+    <div
+      class="fixed top-6 right-6 z-50 flex bg-green-900/40 backdrop-blur-md rounded-full p-1 border border-white/10 shadow-2xl"
+    >
+      <button
+        @click="view = 'bg'"
+        :class="view === 'bg' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'"
+        class="px-6 py-2 rounded-full text-xs uppercase tracking-widest font-bold transition-all duration-300 cursor-pointer"
+      >
+        LOUIS
+      </button>
+      <button
+        @click="view = 'friends'"
+        :class="view === 'friends' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'"
+        class="px-6 py-2 rounded-full text-xs uppercase tracking-widest font-bold transition-all duration-300 cursor-pointer"
+      >
+        PHASE FAMMM
+      </button>
+    </div>
+
+    <div x-show="view === 'bg'" x-cloak>
+      <BgTracker />
+    </div>
+    <div x-show="view === 'friends'" x-cloak>
+      <FriendsTracker />
+    </div>
+
+    <h1
+      class="text-3xl fixed top-4 left-4 z-10 font-black tracking-tighter text-white/90 mix-blend-difference uppercase"
+    >
       Phase Space Look Book!!!!!!!
     </h1>
   </body>

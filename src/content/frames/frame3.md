@@ -4,6 +4,6 @@ outfit:
   - type: ""
     name: ""
     link: ""
-frame: "../../assets/frames/frame3.png"
-gallery: []
+frame: "../../assets/naked/frame3.jpg"
+gallery: ["../../assets/naked/frame3.jpg"]
 ---

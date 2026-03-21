@@ -20,6 +20,26 @@ const framesCollection = defineCollection({
     }),
 });
 
+const friendsCollection = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "./src/content/friends" }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string().optional(),
+      outfit: z
+        .array(
+          z.object({
+            type: z.string(),
+            name: z.string(),
+            link: z.string().optional(),
+          })
+        )
+        .optional(),
+      frame: image(),
+      gallery: z.array(image()).optional(),
+    }),
+});
+
 export const collections = {
   frames: framesCollection,
+  friends: friendsCollection,
 };
