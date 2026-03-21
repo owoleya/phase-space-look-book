@@ -1,0 +1,249 @@
+---
+import { getCollection } from "astro:content";
+import { getImage } from "astro:assets";
+import background from "../assets/phasegang/background.png";
+
+const friends = await getCollection("friends");
+
+const sortedFriends = friends.sort((a, b) => {
+  const numA = parseInt(a.id.match(/frame(\d+)$/)?.[1] || "0", 10);
+  const numB = parseInt(b.id.match(/frame(\d+)$/)?.[1] || "0", 10);
+  return numA - numB;
+});
+
+const friendsData = await Promise.all(
+  sortedFriends.map(async (friend: any) => {
+    // Determine the images to use: gallery if present and not empty, otherwise fallback to frame
+    const gallerySrcs =
+      friend.data.gallery && friend.data.gallery.length > 0
+        ? friend.data.gallery
+        : [friend.data.frame];
+
+    const optimizedGallery = await Promise.all(
+      gallerySrcs.map(async (src: any) => {
+        const optimizedImage = await getImage({ src, format: "webp" });
+        return optimizedImage.src;
+      }),
+    );
+
+    return {
+      gallery: optimizedGallery,
+    };
+  }),
+);
+
+// Map to an array of arrays of optimized image srcs
+const optimizedGalleries = friendsData.map((f: any) => f.gallery);
+---
+
+{
+  optimizedGalleries.map((gallery: string[], colIndex: number) =>
+    gallery.map((src: string, imgIndex: number) => (
+      <link
+        rel="preload"
+        as="image"
+        href={src}
+        fetchpriority={colIndex < 2 && imgIndex === 0 ? "high" : "low"}
+      />
+    )),
+  )
+}
+<div
+  id="friends-tracker-data"
+  data-galleries={JSON.stringify(optimizedGalleries)}
+  class="hidden"
+>
+</div>
+
+<div class="w-full h-svh flex relative z-0">
+  <div
+    id="friends-bg-frame"
+    class="h-full w-full relative overflow-hidden z-10"
+  >
+    <div id="friends-bg-wrapper" class="absolute h-full">
+      <img
+        id="friends-bg-image"
+        class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover relative z-10"
+        src={optimizedGalleries[0]?.[0]}
+      />
+      <img
+        class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover absolute inset-0"
+        src={background.src}
+      />
+    </div>
+  </div>
+</div>
+
+<div
+  id="friends-frame-label"
+  style="left: 50%"
+  class="fixed bottom-24 h-8 w-32 flex items-center gap-2 justify-center bg-green-800/20 rounded-xl z-20 pointer-events-auto cursor-pointer transform max-@3xl:left-1/2 -translate-x-1/2 transition-colors hover:bg-green-800/40 backdrop-blur-md text-white font-medium shadow-lg"
+>
+  Look 1
+</div>
+
+<script>
+  import { gsap } from "gsap";
+  import { Draggable } from "gsap/all";
+
+  gsap.registerPlugin(Draggable);
+
+  const bgFrame = document.getElementById("friends-bg-frame");
+  const bgWrapper = document.getElementById("friends-bg-wrapper");
+  const bgImage = document.getElementById(
+    "friends-bg-image",
+  ) as HTMLImageElement;
+  const cursorLabel = document.getElementById("friends-frame-label");
+  const dataEl = document.getElementById("friends-tracker-data");
+
+  const optimizedGalleries: string[][] = dataEl
+    ? JSON.parse(dataEl.dataset.galleries || "[]")
+    : [];
+  const margin = 16;
+  const totalSections = optimizedGalleries.length || 13;
+
+  let currentColIndex = -1;
+  let currentGalleryIndex = 0;
+  let galleryInterval: number | undefined;
+
+  // Function to start looping through the gallery for a given section
+  const startGalleryLoop = (colIndex: number) => {
+    if (currentColIndex === colIndex) return; // Already running for this column
+
+    currentColIndex = colIndex;
+    currentGalleryIndex = 0;
+
+    // Clear any existing interval
+    if (galleryInterval !== undefined) {
+      window.clearInterval(galleryInterval);
+      galleryInterval = undefined;
+    }
+
+    const gallery = optimizedGalleries[colIndex];
+    if (!gallery || gallery.length === 0) return;
+
+    // Set initial image for the new column
+    if (bgImage) {
+      bgImage.setAttribute("src", gallery[0]);
+    }
+
+    // Start loop if there are multiple images
+    if (gallery.length > 1) {
+      galleryInterval = window.setInterval(() => {
+        if (!bgFrame || bgFrame.offsetParent === null) return;
+        currentGalleryIndex = (currentGalleryIndex + 1) % gallery.length;
+        if (bgImage) {
+          bgImage.setAttribute("src", gallery[currentGalleryIndex]);
+        }
+      }, 300); // 500ms = 0.5s
+    }
+  };
+
+  // --- 1. Swap Frames & Badge Label ---
+  const updateLook = (pointerX: number, isMobile: boolean) => {
+    if (!bgFrame || bgFrame.offsetParent === null) return;
+    const screenWidth = window.innerWidth;
+
+    // Calculate which of the columns the pointer is in
+    let colIndex = Math.floor((pointerX / screenWidth) * totalSections);
+    if (colIndex < 0) colIndex = 0;
+    if (colIndex >= totalSections) colIndex = totalSections - 1;
+
+    const friendNum = colIndex + 1;
+
+    // Trigger the gallery loop logic
+    startGalleryLoop(colIndex);
+
+    // Update label position and text
+    if (cursorLabel) {
+      cursorLabel.textContent = `Look ${friendNum}`;
+
+      // Only track X position if we are not on mobile
+      if (!isMobile) {
+        const maxLeft = screenWidth - cursorLabel.offsetWidth / 2 - margin;
+        const clampedX = Math.max(
+          0 + cursorLabel.offsetWidth / 2 + margin,
+          Math.min(pointerX, maxLeft),
+        );
+        cursorLabel.style.left = `${clampedX}px`;
+      } else {
+        // Reset left inline style so Tailwind max-@3xl overrides apply correctly
+        cursorLabel.style.left = "50%";
+      }
+    }
+  };
+
+  // --- 2. Interaction Logic Desktop ---
+  let rafScheduled = false;
+  let isMobileView = window.matchMedia("(max-width: 768px)").matches;
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isMobileView || rafScheduled) return;
+    rafScheduled = true;
+    requestAnimationFrame(() => {
+      updateLook(e.clientX, false);
+      rafScheduled = false;
+    });
+  };
+
+  // Set up GSAP Draggable for mobile
+  let draggableInstance: Draggable[] = [];
+
+  function initDraggable() {
+    if (!bgImage || !bgWrapper || !bgFrame) return;
+
+    // Kill existing instance on re-init (e.g. resize)
+    if (draggableInstance.length) {
+      draggableInstance[0].kill();
+    }
+
+    const containerWidth = bgFrame.offsetWidth;
+    const imageWidth = bgImage.offsetWidth;
+    const minX = Math.min(0, containerWidth - imageWidth);
+
+    draggableInstance = Draggable.create(bgWrapper, {
+      type: "x",
+      bounds: {
+        minX: minX,
+        maxX: 0,
+        minY: 0,
+        maxY: 0,
+      },
+      onDrag: function () {
+        // Map drag position to a 0..screenWidth range for frame lookup
+        const progress = minX === 0 ? 0 : this.x / minX; // 0 at maxX, 1 at minX
+        const pointerX = progress * window.innerWidth;
+        updateLook(pointerX, true);
+      },
+    });
+  }
+
+  // Wait for image to load so dimensions are known
+  if (bgImage) {
+    if (bgImage.complete) {
+      initDraggable();
+    } else {
+      bgImage.addEventListener("load", initDraggable);
+    }
+    window.addEventListener("resize", initDraggable);
+  }
+
+  // Toggle behavior based on screen size
+  const mql = window.matchMedia("(max-width: 768px)");
+  const handleResize = (e: MediaQueryListEvent | MediaQueryList) => {
+    isMobileView = e.matches;
+
+    // Reset view states depending on transition
+    if (isMobileView) {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (draggableInstance[0]) draggableInstance[0].enable();
+    } else {
+      window.addEventListener("mousemove", handleMouseMove);
+      if (draggableInstance[0]) draggableInstance[0].disable();
+    }
+  };
+
+  // Init
+  mql.addEventListener("change", handleResize);
+  handleResize(mql);
+</script>

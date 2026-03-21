@@ -1,23 +1,27 @@
 ---
+import { getCollection } from "astro:content";
 import { getImage } from "astro:assets";
 
-const imageFiles = import.meta.glob<{ default: ImageMetadata }>(
-  "/src/assets/frames/*.png",
-);
+const frames = await getCollection("frames");
 
-const sortedKeys = Object.keys(imageFiles).sort((a, b) => {
-  const numA = parseInt(a.match(/frame(\d+)\.png$/)?.[1] || "0", 10);
-  const numB = parseInt(b.match(/frame(\d+)\.png$/)?.[1] || "0", 10);
+const sortedFrames = frames.sort((a, b) => {
+  const numA = parseInt(a.id.match(/frame(\d+)$/)?.[1] || "0", 10);
+  const numB = parseInt(b.id.match(/frame(\d+)$/)?.[1] || "0", 10);
   return numA - numB;
 });
 
-const optimizedImages = await Promise.all(
-  sortedKeys.map(async (key) => {
-    const { default: img } = await imageFiles[key]();
-    const optimized = await getImage({ src: img, format: "webp" });
-    return optimized.src;
+const framesData = await Promise.all(
+  sortedFrames.map(async (frame: any) => {
+    const optimizedMain = await getImage({
+      src: frame.data.frame,
+      format: "webp",
+    });
+    return {
+      main: optimizedMain.src,
+    };
   }),
 );
+const optimizedImages = framesData.map((f: any) => f.main);
 ---
 
 {
@@ -40,7 +44,11 @@ const optimizedImages = await Promise.all(
 <div class="w-full h-svh flex relative z-0">
   <div id="bg-frame" class="h-full w-full relative overflow-hidden">
     <div id="bg-wrapper" class="absolute h-full">
-      <img id="bg-image" class="h-full min-w-fit" src={optimizedImages[0]} />
+      <img
+        id="bg-image"
+        class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover"
+        src={optimizedImages[0]}
+      />
     </div>
   </div>
 </div>
@@ -48,9 +56,9 @@ const optimizedImages = await Promise.all(
 <div
   id="frame-label"
   style="left: 50%"
-  class="fixed bottom-24 h-8 w-32 flex items-center gap-2 justify-center bg-green-800/20 rounded-xl z-20 pointer-events-none transform max-@3xl:left-1/2 -translate-x-1/2"
+  class="fixed bottom-24 h-8 w-32 flex items-center gap-2 justify-center bg-green-800/20 rounded-xl z-20 pointer-events-auto cursor-pointer transform max-@3xl:left-1/2 -translate-x-1/2 transition-colors hover:bg-green-800/40 backdrop-blur-md text-white font-medium shadow-lg"
 >
-  Drag around
+  Look 1
 </div>
 
 <script>
@@ -75,6 +83,7 @@ const optimizedImages = await Promise.all(
 
   // --- 1. Swap Frames & Badge Label ---
   const updateLook = (pointerX: number, isMobile: boolean) => {
+    if (!bgFrame || bgFrame.offsetParent === null) return;
     const screenWidth = window.innerWidth;
     // console.log("updateLook", { pointerX, isMobile, screenWidth });
 
@@ -121,7 +130,8 @@ const optimizedImages = await Promise.all(
   let isMobileView = window.matchMedia("(max-width: 768px)").matches;
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (isMobileView || rafScheduled) return;
+    if (isMobileView || rafScheduled || !bgFrame || bgFrame.offsetParent === null)
+      return;
     rafScheduled = true;
     requestAnimationFrame(() => {
       updateLook(e.clientX, false);
