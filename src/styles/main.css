@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme {
+  --color-phasegreen: #00FF00;
+}
+
 :root {
   overscroll-behavior: none;
 }

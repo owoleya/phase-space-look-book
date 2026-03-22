@@ -36,37 +36,244 @@ import FriendsTracker from "../components/friends-tracker.astro";
       }
     </style>
   </head>
-  <body x-data="{ view: 'friends' }">
+  <body
+    x-data="{ view: 'friends',
+    filterModal:false,
+    filters:{
+      hue:0,
+      dilate:0,
+      wavy:0,
+      red:1,
+      blue:1,
+      green:1
+    }
+  }"
+  >
     <div
-      class="fixed top-6 right-6 z-50 flex bg-green-900/40 backdrop-blur-md rounded-full p-1 border border-white/10 shadow-2xl"
+      x-show="filterModal"
+      class="fixed inset-0 z-[100] flex items-center justify-center"
+      @click="filterModal = false"
+      x-cloak
     >
-      <button
-        @click="view = 'bg'"
-        :class="view === 'bg' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'"
-        class="px-6 py-2 rounded-full text-xs uppercase tracking-widest font-bold transition-all duration-300 cursor-pointer"
+      <div
+        class="border border-phasegreen p-8 rounded-3xl w-full max-w-sm flex flex-col gap-6 text-phasegreen shadow-2xl bg-black"
+        @click.stop
       >
-        LOUIS
-      </button>
+        <div class="flex justify-between items-center">
+          <h2 class="font-bold text-xl uppercase tracking-widest">Filters</h2>
+          <button
+            @click="filterModal = false"
+            class="hover:text-white transition-colors"
+          >
+            <svg
+              class="size-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="flex flex-col gap-4">
+          <label
+            class="flex flex-col gap-2 text-xs font-bold tracking-widest uppercase"
+          >
+            <div class="flex justify-between">
+              <span>Hue</span><span
+                x-text="filters.hue + '°'"
+                class="text-white"></span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              x-model="filters.hue"
+              class="accent-phasegreen"
+            />
+          </label>
+          <label
+            class="flex flex-col gap-2 text-xs font-bold tracking-widest uppercase"
+          >
+            <div class="flex justify-between">
+              <span>Dilate</span><span
+                x-text="filters.dilate"
+                class="text-white"></span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="20"
+              x-model="filters.dilate"
+              class="accent-phasegreen"
+            />
+          </label>
+          <label
+            class="flex flex-col gap-2 text-xs font-bold tracking-widest uppercase"
+          >
+            <div class="flex justify-between">
+              <span>Wavy</span><span x-text="filters.wavy" class="text-white"
+              ></span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              x-model="filters.wavy"
+              class="accent-phasegreen"
+            />
+          </label>
+          <label
+            class="flex flex-col gap-2 text-xs font-bold tracking-widest uppercase"
+          >
+            <div class="flex justify-between">
+              <span>Red</span><span x-text="filters.red" class="text-white"
+              ></span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="5"
+              step="0.1"
+              x-model="filters.red"
+              class="accent-phasegreen"
+            />
+          </label>
+          <label
+            class="flex flex-col gap-2 text-xs font-bold tracking-widest uppercase"
+          >
+            <div class="flex justify-between">
+              <span>Green</span><span x-text="filters.green" class="text-white"
+              ></span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="5"
+              step="0.1"
+              x-model="filters.green"
+              class="accent-phasegreen"
+            />
+          </label>
+          <label
+            class="flex flex-col gap-2 text-xs font-bold tracking-widest uppercase"
+          >
+            <div class="flex justify-between">
+              <span>Blue</span><span x-text="filters.blue" class="text-white"
+              ></span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="5"
+              step="0.1"
+              x-model="filters.blue"
+              class="accent-phasegreen"
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="fixed h-8 flex gap-4 left-1/2 whitespace-nowrap -translate-x-1/2 bottom-6 z-50"
+    >
+      <div class="flex h-full bg-phasegreen rounded-full">
+        <button
+          @click="view = 'friends'"
+          :class="view === 'friends' ? 'bg-black text-phasegreen' : 'text-black hover:text-black/20 '"
+          class="px-6 py-2 rounded-full text-xs uppercase tracking-widest font-bold cursor-pointer"
+        >
+          FRIENDSSS
+        </button>
+        <button
+          @click="view = 'bg'"
+          :class="view === 'bg' ? 'bg-black text-phasegreen' : 'text-black hover:text-black/20 '"
+          class="px-6 py-2 rounded-full text-xs uppercase tracking-widest font-bold cursor-pointer"
+        >
+          LOUIS NAKED
+        </button>
+      </div>
       <button
-        @click="view = 'friends'"
-        :class="view === 'friends' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'"
-        class="px-6 py-2 rounded-full text-xs uppercase tracking-widest font-bold transition-all duration-300 cursor-pointer"
+        @click="filterModal = true"
+        class="bg-phasegreen hover:text-phasegreen hover:bg-black text-black size-8 flex items-center justify-center rounded-full"
       >
-        PHASE FAMMM
+        <svg
+          class="size-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path d="m14.622 17.897-10.68-2.913"></path><path
+            d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z"
+          ></path><path
+            d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15"
+          ></path></svg
+        >
       </button>
     </div>
 
-    <div x-show="view === 'bg'" x-cloak>
-      <BgTracker />
+    <div
+      :style="`filter: hue-rotate(${filters.hue}deg) url(#blur) url(#wavy) url(#color-matrix);`"
+    >
+      <div x-show="view === 'bg'" x-cloak>
+        <BgTracker />
+      </div>
+      <div x-show="view === 'friends'" x-cloak>
+        <FriendsTracker />
+      </div>
     </div>
-    <div x-show="view === 'friends'" x-cloak>
-      <FriendsTracker />
-    </div>
+
+    <svg style="display: none;">
+      <defs>
+        <filter id="blur">
+          <feMorphology
+            in="SourceGraphic"
+            operator="dilate"
+            :radius="filters.dilate"></feMorphology>
+        </filter>
+        <filter id="wavy">
+          <feTurbulence
+            id="fractalNoise"
+            type="fractalNoise"
+            numOctaves="1"
+            result="NOISE"
+          >
+            <animate
+              attributeName="baseFrequency"
+              dur="10s"
+              keyTimes="0;0.5;1"
+              values="0.01 0.02;0.02 0.04;0.01 0.02"
+              repeatCount="indefinite"></animate>
+          </feTurbulence>
+          <feDisplacementMap
+            in="SourceGraphic"
+            in2="NOISE"
+            xChannelSelector="R"
+            yChannelSelector="G"
+            :scale="filters.wavy"></feDisplacementMap>
+        </filter>
+        <filter id="color-matrix">
+          <feColorMatrix
+            in="SourceGraphic"
+            type="matrix"
+            :values="`${filters.red} 0 0 0 0 0 ${filters.green} 0 0 0 0 0 ${filters.blue} 0 0 0 0 0 1 0`"
+          >
+          </feColorMatrix>
+        </filter>
+      </defs>
+    </svg>
 
     <h1
-      class="text-3xl fixed top-4 left-4 z-10 font-black tracking-tighter text-white/90 mix-blend-difference uppercase"
+      class="text-4xl fixed top-4 left-1/2 -translate-x-1/2 z-50 font-black tracking-tighter text-white uppercase"
     >
-      Phase Space Look Book!!!!!!!
+      Phase Space!!!!!!
     </h1>
   </body>
 </html>
