@@ -1,6 +1,6 @@
 ---
 import { getCollection } from "astro:content";
-import { getImage } from "astro:assets";
+import { Image } from "astro:assets";
 
 const frames = await getCollection("frames");
 
@@ -9,45 +9,38 @@ const sortedFrames = frames.sort((a, b) => {
   const numB = parseInt(b.id.match(/frame(\d+)$/)?.[1] || "0", 10);
   return numA - numB;
 });
-
-const framesData = await Promise.all(
-  sortedFrames.map(async (frame: any) => {
-    const optimizedMain = await getImage({
-      src: frame.data.frame,
-      format: "webp",
-    });
-    return {
-      main: optimizedMain.src,
-    };
-  }),
-);
-const optimizedImages = framesData.map((f: any) => f.main);
 ---
 
-{
-  optimizedImages.map((src, index) => (
-    <link
-      rel="preload"
-      as="image"
-      href={src}
-      fetchpriority={index < 2 ? "high" : "low"}
-    />
-  ))
-}
 <div
-  id="bg-tracker-data"
-  data-images={JSON.stringify(optimizedImages)}
-  class="hidden"
+  id="preload-container"
+  aria-hidden="true"
+  style="position: absolute; width: 0; height: 0; overflow: hidden; z-index: -1;"
 >
+  {
+    sortedFrames.map((frame, index) => (
+      <Image
+        src={frame.data.frame}
+        alt={`Look ${index + 1}`}
+        format="webp"
+        data-index={index}
+        fetchpriority={index < 2 ? "high" : "low"}
+        loading={index < 2 ? "eager" : "lazy"}
+      />
+    ))
+  }
 </div>
 
 <div class="w-full h-svh flex relative z-0">
   <div id="bg-frame" class="h-full w-full relative overflow-hidden">
     <div id="bg-wrapper" class="absolute h-full">
-      <img
+      <Image
         id="bg-image"
         class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover"
-        src={optimizedImages[0]}
+        src={sortedFrames[0].data.frame}
+        alt="Main Look"
+        format="webp"
+        fetchpriority="high"
+        loading="eager"
       />
     </div>
   </div>
@@ -73,11 +66,10 @@ const optimizedImages = framesData.map((f: any) => f.main);
   const bgWrapper = document.getElementById("bg-wrapper");
   const bgImage = document.getElementById("bg-image");
   const cursorLabel = document.getElementById("frame-label");
-  const dataEl = document.getElementById("bg-tracker-data");
-
-  const optimizedImages = dataEl
-    ? JSON.parse(dataEl.dataset.images || "[]")
-    : [];
+  
+  const preloadContainer = document.getElementById("preload-container");
+  const preloadedImgs = preloadContainer ? Array.from(preloadContainer.querySelectorAll("img")).sort((a, b) => parseInt(a.dataset.index!) - parseInt(b.dataset.index!)) : [];
+  const optimizedImages = preloadedImgs.map(img => img.src);
   const margin = 16;
   const totalFrames = optimizedImages.length || 13;
 

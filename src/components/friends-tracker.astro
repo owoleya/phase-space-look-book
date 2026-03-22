@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
-import { getImage } from "astro:assets";
-import background from "../assets/phasegang/background.png";
+import { Image } from "astro:assets";
+import background from "../assets/phasegang/background.webp";
 
 const friends = await getCollection("friends");
 
@@ -10,49 +10,33 @@ const sortedFriends = friends.sort((a, b) => {
   const numB = parseInt(b.id.match(/frame(\d+)$/)?.[1] || "0", 10);
   return numA - numB;
 });
-
-const friendsData = await Promise.all(
-  sortedFriends.map(async (friend: any) => {
-    // Determine the images to use: gallery if present and not empty, otherwise fallback to frame
-    const gallerySrcs =
-      friend.data.gallery && friend.data.gallery.length > 0
-        ? friend.data.gallery
-        : [friend.data.frame];
-
-    const optimizedGallery = await Promise.all(
-      gallerySrcs.map(async (src: any) => {
-        const optimizedImage = await getImage({ src, format: "webp" });
-        return optimizedImage.src;
-      }),
-    );
-
-    return {
-      gallery: optimizedGallery,
-    };
-  }),
-);
-
-// Map to an array of arrays of optimized image srcs
-const optimizedGalleries = friendsData.map((f: any) => f.gallery);
 ---
 
-{
-  optimizedGalleries.map((gallery: string[], colIndex: number) =>
-    gallery.map((src: string, imgIndex: number) => (
-      <link
-        rel="preload"
-        as="image"
-        href={src}
-        fetchpriority={colIndex < 2 && imgIndex === 0 ? "high" : "low"}
-      />
-    )),
-  )
-}
 <div
-  id="friends-tracker-data"
-  data-galleries={JSON.stringify(optimizedGalleries)}
-  class="hidden"
+  id="friends-preload-container"
+  aria-hidden="true"
+  style="position: absolute; width: 0; height: 0; overflow: hidden; z-index: -1;"
 >
+  {
+    sortedFriends.map((friend, colIndex) => {
+      const gallerySrcs =
+        friend.data.gallery && friend.data.gallery.length > 0
+          ? friend.data.gallery
+          : [friend.data.frame];
+
+      return gallerySrcs.map((src: any, imgIndex: number) => (
+        <Image
+          src={src}
+          alt={`Friend ${colIndex + 1} Image ${imgIndex + 1}`}
+          format="webp"
+          data-col={colIndex}
+          data-img={imgIndex}
+          fetchpriority={colIndex < 2 && imgIndex === 0 ? "high" : "low"}
+          loading={colIndex < 2 && imgIndex === 0 ? "eager" : "lazy"}
+        />
+      ));
+    })
+  }
 </div>
 
 <div class="w-full h-svh flex relative z-0">
@@ -61,14 +45,24 @@ const optimizedGalleries = friendsData.map((f: any) => f.gallery);
     class="h-full w-full relative overflow-hidden z-10"
   >
     <div id="friends-bg-wrapper" class="absolute h-full">
-      <img
+      <Image
         id="friends-bg-image"
         class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover relative z-10"
-        src={optimizedGalleries[0]?.[0]}
+        src={
+          sortedFriends[0].data.gallery && sortedFriends[0].data.gallery.length > 0
+            ? sortedFriends[0].data.gallery[0]
+            : sortedFriends[0].data.frame
+        }
+        alt="Main Friend Look"
+        format="webp"
+        fetchpriority="high"
+        loading="eager"
       />
-      <img
+      <Image
         class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover absolute inset-0"
-        src={background.src}
+        src={background}
+        alt="Background"
+        format="webp"
       />
     </div>
   </div>
@@ -100,13 +94,18 @@ const optimizedGalleries = friendsData.map((f: any) => f.gallery);
       "friends-bg-image",
     ) as HTMLImageElement;
     const cursorLabel = document.getElementById("friends-frame-label");
-    const dataEl = document.getElementById("friends-tracker-data");
+    const preloadContainer = document.getElementById("friends-preload-container");
 
-    if (!bgFrame || !bgWrapper || !bgImage || !dataEl) return;
+    if (!bgFrame || !bgWrapper || !bgImage || !preloadContainer) return;
 
-    const optimizedGalleries: string[][] = dataEl
-      ? JSON.parse(dataEl.dataset.galleries || "[]")
-      : [];
+    const preloadedImgs = Array.from(preloadContainer.querySelectorAll("img"));
+    const optimizedGalleries: string[][] = [];
+    preloadedImgs.forEach((img) => {
+      const col = parseInt(img.dataset.col!);
+      const imgIndex = parseInt(img.dataset.img!);
+      if (!optimizedGalleries[col]) optimizedGalleries[col] = [];
+      optimizedGalleries[col][imgIndex] = img.src;
+    });
     const margin = 16;
     const totalSections = optimizedGalleries.length || 13;
 
