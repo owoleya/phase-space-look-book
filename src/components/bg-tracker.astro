@@ -42,11 +42,11 @@ const optimizedImages = framesData.map((f: any) => f.main);
 </div>
 
 <div class="w-full h-svh flex relative z-0">
-  <div id="bg-frame" class="h-full w-full relative overflow-hidden">
+  <div id="bg-frame" class="h-svh lg:h-full w-full relative overflow-hidden">
     <div id="bg-wrapper" class="absolute h-full">
       <img
         id="bg-image"
-        class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover"
+        class="w-auto max-w-none min-w-full h-svh object-cover lg:w-screen lg:max-w-full lg:min-w-0 lg:h-screen"
         src={optimizedImages[0]}
       />
     </div>
@@ -130,7 +130,12 @@ const optimizedImages = framesData.map((f: any) => f.main);
   let isMobileView = window.matchMedia("(max-width: 768px)").matches;
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (isMobileView || rafScheduled || !bgFrame || bgFrame.offsetParent === null)
+    if (
+      isMobileView ||
+      rafScheduled ||
+      !bgFrame ||
+      bgFrame.offsetParent === null
+    )
       return;
     rafScheduled = true;
     requestAnimationFrame(() => {

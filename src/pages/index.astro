@@ -220,6 +220,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </div>
 
     <div
+      class="relative"
       :style="`filter: hue-rotate(${filters.hue}deg) url(#blur) url(#wavy) url(#color-matrix);`"
     >
       <div x-show="view === 'bg'" x-cloak>
@@ -271,7 +272,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </svg>
 
     <h1
-      class="text-4xl fixed top-4 left-1/2 -translate-x-1/2 z-50 font-black tracking-tighter text-white uppercase"
+      class="text-4xl fixed top-4 left-1/2 whitespace-nowrap -translate-x-1/2 z-50 font-black tracking-tighter text-white uppercase"
     >
       Phase Space!!!!!!
     </h1>

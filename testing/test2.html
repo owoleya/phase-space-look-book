@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body, html { margin: 0; padding: 0; }
+    </style>
+</head>
+<body>
+<div class="w-full h-svh flex relative z-0 overflow-hidden" id="bg-frame">
+    <div id="bg-wrapper" class="absolute h-full flex">
+      <img
+        class="w-auto min-w-full max-w-none h-svh object-cover lg:w-screen lg:min-w-0 lg:max-w-full lg:h-screen"
+        src="https://images.unsplash.com/photo-1542314831-c6a4d14effd0?w=3000&h=2000&fit=crop"
+        id="bg-image"
+      />
+    </div>
+  </div>
+  <script>
+    setTimeout(() => {
+        const frame = document.getElementById('bg-frame');
+        const img = document.getElementById('bg-image');
+        alert("frame:" + frame.offsetWidth + " img:" + img.offsetWidth);
+    }, 1000);
+  </script>
+</body>
+</html>

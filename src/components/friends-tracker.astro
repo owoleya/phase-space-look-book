@@ -58,16 +58,16 @@ const optimizedGalleries = friendsData.map((f: any) => f.gallery);
 <div class="w-full h-svh flex relative z-0">
   <div
     id="friends-bg-frame"
-    class="h-full w-full relative overflow-hidden z-10"
+    class="h-svh lg:h-full w-full relative overflow-hidden z-10"
   >
-    <div id="friends-bg-wrapper" class="absolute h-full">
+    <div id="friends-bg-wrapper" class="absolute h-svh lg:h-full">
       <img
         id="friends-bg-image"
-        class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover relative z-10"
+        class="w-auto max-w-none min-w-full h-svh object-cover lg:w-screen lg:max-w-full lg:min-w-0 lg:h-screen relative z-10"
         src={optimizedGalleries[0]?.[0]}
       />
       <img
-        class="lg:w-screen min-w-fit lg:min-w-auto h-screen object-cover absolute inset-0"
+        class="w-auto max-w-none min-w-full h-svh object-cover lg:w-screen lg:max-w-full lg:min-w-0 lg:h-screen absolute inset-0"
         src={background.src}
       />
     </div>
