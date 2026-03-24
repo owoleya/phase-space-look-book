@@ -28,42 +28,6 @@ import FriendsTracker from "../components/friends-tracker.astro";
     <link rel="manifest" href="/favicon/site.webmanifest" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
-    <script is:inline>
-      window.waitForImages = async () => {
-        const getImagesFromAttr = (id, attr) => {
-          const el = document.getElementById(id);
-          if (!el || !el.dataset[attr]) return [];
-          try {
-            const data = JSON.parse(el.dataset[attr]);
-            return Array.isArray(data) ? data.flat(Infinity) : [];
-          } catch (e) {
-            return [];
-          }
-        };
-
-        const allSrcs = new Set([
-          ...Array.from(document.querySelectorAll("img")).map((img) => img.src),
-          ...getImagesFromAttr("bg-tracker-data", "images"),
-          ...getImagesFromAttr("friends-tracker-data", "galleries"),
-        ]);
-
-        const load = (src) =>
-          new Promise((resolve) => {
-            if (!src) return resolve();
-            const img = new Image();
-            img.onload = img.onerror = resolve;
-            img.src = src;
-          });
-
-        await Promise.all(Array.from(allSrcs).map(load));
-      };
-
-      // Wait for everything and then signal Alpine
-      window.addEventListener("load", async () => {
-        await window.waitForImages();
-        document.dispatchEvent(new CustomEvent("images-ready"));
-      });
-    </script>
     <script src="//unpkg.com/alpinejs" defer></script>
     <title>Phase Space Look Book!!!!!!!</title>
     <style>
@@ -73,23 +37,20 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </style>
   </head>
   <body
-    x-data="{ 
-    isLoaded: false,
-    view: 'friends',
+    x-data="{ view: 'friends',
     filterModal:false,
     filters:{
       hue:0,
-      dilate:0.01,
+      dilate:0,
       wavy:0,
       red:1,
       blue:1,
       green:1
     }
   }"
-    @images-ready.window="isLoaded = true"
   >
     <div
-      x-show="filterModal && isLoaded"
+      x-show="filterModal"
       class="fixed inset-0 z-[100] flex items-center justify-center"
       @click="filterModal = false"
       x-cloak
@@ -219,9 +180,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </div>
 
     <div
-      x-show="isLoaded"
       class="fixed h-8 flex gap-4 left-1/2 whitespace-nowrap -translate-x-1/2 bottom-6 z-50"
-      x-cloak
     >
       <div class="flex h-full bg-phasegreen rounded-full">
         <button
@@ -261,11 +220,9 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </div>
 
     <div
-      x-show="isLoaded"
       class="relative"
       style="transform: translateZ(0);"
-      :style="isLoaded ? `filter: url(#combined-filter);` : ''"
-      x-cloak
+      :style="`filter: url(#combined-filter);`"
     >
       <div x-show="view === 'bg'" x-cloak>
         <BgTracker />
@@ -328,9 +285,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </svg>
 
     <h1
-      x-show="isLoaded"
       class="text-4xl fixed top-4 left-1/2 whitespace-nowrap -translate-x-1/2 z-50 font-black tracking-tighter text-white uppercase"
-      x-cloak
     >
       Phase Space!!!!!!
     </h1>
