@@ -198,7 +198,7 @@ const optimizedGalleries = friendsData.map((f: any) => f.gallery);
     let draggableInstance: Draggable[] = [];
 
     function initDraggable() {
-      if (!bgImage || !bgWrapper || !bgFrame) return;
+      if (!bgImage || !bgWrapper || !bgFrame || bgFrame.offsetParent === null) return;
 
       // Kill existing instance on re-init (e.g. resize)
       if (draggableInstance.length) {
@@ -228,6 +228,20 @@ const optimizedGalleries = friendsData.map((f: any) => f.gallery);
       if (!isMobileView && draggableInstance[0]) {
         draggableInstance[0].disable();
       }
+    }
+
+    // Use IntersectionObserver to re-init draggable when the element becomes visible (e.g., tab switch)
+    let observer: IntersectionObserver | null = null;
+    if (bgFrame) {
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Add a small delay to ensure layout is fully computed after display changes
+            setTimeout(initDraggable, 50);
+          }
+        });
+      });
+      observer.observe(bgFrame);
     }
 
     // Wait for image to load so dimensions are known
@@ -264,6 +278,10 @@ const optimizedGalleries = friendsData.map((f: any) => f.gallery);
     (window as any)._friendsTrackerCleanup = () => {
       if (galleryInterval !== undefined) {
         window.clearInterval(galleryInterval);
+      }
+      if (observer && bgFrame) {
+        observer.unobserve(bgFrame);
+        observer.disconnect();
       }
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("resize", initDraggable);
