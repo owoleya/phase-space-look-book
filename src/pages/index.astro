@@ -28,6 +28,42 @@ import FriendsTracker from "../components/friends-tracker.astro";
     <link rel="manifest" href="/favicon/site.webmanifest" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
+    <script is:inline>
+      window.waitForImages = async () => {
+        const getImagesFromAttr = (id, attr) => {
+          const el = document.getElementById(id);
+          if (!el || !el.dataset[attr]) return [];
+          try {
+            const data = JSON.parse(el.dataset[attr]);
+            return Array.isArray(data) ? data.flat(Infinity) : [];
+          } catch (e) {
+            return [];
+          }
+        };
+
+        const allSrcs = new Set([
+          ...Array.from(document.querySelectorAll("img")).map((img) => img.src),
+          ...getImagesFromAttr("bg-tracker-data", "images"),
+          ...getImagesFromAttr("friends-tracker-data", "galleries"),
+        ]);
+
+        const load = (src) =>
+          new Promise((resolve) => {
+            if (!src) return resolve();
+            const img = new Image();
+            img.onload = img.onerror = resolve;
+            img.src = src;
+          });
+
+        await Promise.all(Array.from(allSrcs).map(load));
+      };
+
+      // Wait for everything and then signal Alpine
+      window.addEventListener("load", async () => {
+        await window.waitForImages();
+        document.dispatchEvent(new CustomEvent("images-ready"));
+      });
+    </script>
     <script src="//unpkg.com/alpinejs" defer></script>
     <title>Phase Space Look Book!!!!!!!</title>
     <style>
@@ -37,20 +73,23 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </style>
   </head>
   <body
-    x-data="{ view: 'friends',
+    x-data="{ 
+    isLoaded: false,
+    view: 'friends',
     filterModal:false,
     filters:{
       hue:0,
-      dilate:0,
+      dilate:0.01,
       wavy:0,
       red:1,
       blue:1,
       green:1
     }
   }"
+    @images-ready.window="isLoaded = true"
   >
     <div
-      x-show="filterModal"
+      x-show="filterModal && isLoaded"
       class="fixed inset-0 z-[100] flex items-center justify-center"
       @click="filterModal = false"
       x-cloak
@@ -92,7 +131,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
               type="range"
               min="0"
               max="360"
-              x-model="filters.hue"
+              x-model.number="filters.hue"
               class="accent-phasegreen"
             />
           </label>
@@ -108,7 +147,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
               type="range"
               min="0"
               max="20"
-              x-model="filters.dilate"
+              x-model.number="filters.dilate"
               class="accent-phasegreen"
             />
           </label>
@@ -123,7 +162,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
               type="range"
               min="0"
               max="100"
-              x-model="filters.wavy"
+              x-model.number="filters.wavy"
               class="accent-phasegreen"
             />
           </label>
@@ -139,7 +178,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
               min="0"
               max="5"
               step="0.1"
-              x-model="filters.red"
+              x-model.number="filters.red"
               class="accent-phasegreen"
             />
           </label>
@@ -155,7 +194,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
               min="0"
               max="5"
               step="0.1"
-              x-model="filters.green"
+              x-model.number="filters.green"
               class="accent-phasegreen"
             />
           </label>
@@ -171,7 +210,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
               min="0"
               max="5"
               step="0.1"
-              x-model="filters.blue"
+              x-model.number="filters.blue"
               class="accent-phasegreen"
             />
           </label>
@@ -180,7 +219,9 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </div>
 
     <div
+      x-show="isLoaded"
       class="fixed h-8 flex gap-4 left-1/2 whitespace-nowrap -translate-x-1/2 bottom-6 z-50"
+      x-cloak
     >
       <div class="flex h-full bg-phasegreen rounded-full">
         <button
@@ -220,8 +261,11 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </div>
 
     <div
+      x-show="isLoaded"
       class="relative"
-      :style="`filter: hue-rotate(${filters.hue}deg) url(#blur) url(#wavy) url(#color-matrix);`"
+      style="transform: translateZ(0);"
+      :style="isLoaded ? `filter: url(#combined-filter);` : ''"
+      x-cloak
     >
       <div x-show="view === 'bg'" x-cloak>
         <BgTracker />
@@ -231,18 +275,29 @@ import FriendsTracker from "../components/friends-tracker.astro";
       </div>
     </div>
 
-    <svg style="display: none;">
+    <svg
+      style="position: absolute; width: 0; height: 0; pointer-events: none; overflow: hidden;"
+      aria-hidden="true"
+    >
       <defs>
-        <filter id="blur">
+        <filter id="combined-filter">
+          <!-- 1. Hue Rotate -->
+          <feColorMatrix
+            type="hueRotate"
+            :values="filters.hue"
+            result="HUE_ROTATE"></feColorMatrix>
+
+          <!-- 2. Dilate (Blur/Expand) -->
           <feMorphology
-            in="SourceGraphic"
+            in="HUE_ROTATE"
             operator="dilate"
-            :radius="filters.dilate"></feMorphology>
-        </filter>
-        <filter id="wavy">
+            :radius="filters.dilate"
+            result="MORPHOLOGY"></feMorphology>
+
+          <!-- 3. Wavy (Displacement) -->
           <feTurbulence
-            id="fractalNoise"
             type="fractalNoise"
+            baseFrequency="0.01 0.02"
             numOctaves="1"
             result="NOISE"
           >
@@ -254,16 +309,17 @@ import FriendsTracker from "../components/friends-tracker.astro";
               repeatCount="indefinite"></animate>
           </feTurbulence>
           <feDisplacementMap
-            in="SourceGraphic"
+            in="MORPHOLOGY"
             in2="NOISE"
             xChannelSelector="R"
             yChannelSelector="G"
-            :scale="filters.wavy"></feDisplacementMap>
-        </filter>
-        <filter id="color-matrix">
+            :scale="filters.wavy"
+            result="DISPLACEMENT"></feDisplacementMap>
+
+          <!-- 4. Color Matrix (RGB Scaling) -->
           <feColorMatrix
-            in="SourceGraphic"
-            type="matrix"
+            in="DISPLACEMENT            type="
+            matrix"
             :values="`${filters.red} 0 0 0 0 0 ${filters.green} 0 0 0 0 0 ${filters.blue} 0 0 0 0 0 1 0`"
           >
           </feColorMatrix>
@@ -272,7 +328,9 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </svg>
 
     <h1
+      x-show="isLoaded"
       class="text-4xl fixed top-4 left-1/2 whitespace-nowrap -translate-x-1/2 z-50 font-black tracking-tighter text-white uppercase"
+      x-cloak
     >
       Phase Space!!!!!!
     </h1>
