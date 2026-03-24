@@ -184,14 +184,14 @@ import FriendsTracker from "../components/friends-tracker.astro";
     >
       <div class="flex h-full bg-phasegreen rounded-full">
         <button
-          @click="view = 'friends'"
+          @click="view = 'friends'; $nextTick(() => window.dispatchEvent(new Event('resize')))"
           :class="view === 'friends' ? 'bg-black text-phasegreen' : 'text-black hover:text-black/20 '"
           class="px-6 py-2 rounded-full text-xs uppercase tracking-widest font-bold cursor-pointer"
         >
           FRIENDSSS
         </button>
         <button
-          @click="view = 'bg'"
+          @click="view = 'bg'; $nextTick(() => window.dispatchEvent(new Event('resize')))"
           :class="view === 'bg' ? 'bg-black text-phasegreen' : 'text-black hover:text-black/20 '"
           class="px-6 py-2 rounded-full text-xs uppercase tracking-widest font-bold cursor-pointer"
         >

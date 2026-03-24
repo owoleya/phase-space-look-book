@@ -224,6 +224,10 @@ const optimizedGalleries = friendsData.map((f: any) => f.gallery);
           updateLook(pointerX, true);
         },
       });
+
+      if (!isMobileView && draggableInstance[0]) {
+        draggableInstance[0].disable();
+      }
     }
 
     // Wait for image to load so dimensions are known
