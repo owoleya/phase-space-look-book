@@ -176,6 +176,10 @@ import FriendsTracker from "../components/friends-tracker.astro";
             />
           </label>
         </div>
+        <p>
+          if the effects arent showing, it might because your browser is not new
+          enough :(
+        </p>
       </div>
     </div>
 
@@ -222,7 +226,7 @@ import FriendsTracker from "../components/friends-tracker.astro";
     <div
       class="relative"
       style="transform: translateZ(0);"
-      :style="`filter: url(#combined-filter);`"
+      :style="`filter: url(#combined-filter); -webkit-filter: url(#combined-filter); --force-repaint: ${filters.hue + filters.dilate + filters.wavy + filters.red + filters.green + filters.blue};`"
     >
       <div x-show="view === 'bg'" x-cloak>
         <BgTracker />
@@ -233,11 +237,11 @@ import FriendsTracker from "../components/friends-tracker.astro";
     </div>
 
     <svg
-      style="position: absolute; width: 0; height: 0; pointer-events: none; overflow: hidden;"
+      class="pointer-events-none absolute -left-[9999px] -top-[9999px] w-0 h-0"
       aria-hidden="true"
     >
       <defs>
-        <filter id="combined-filter">
+        <filter id="combined-filter" color-interpolation-filters="sRGB">
           <!-- 1. Hue Rotate -->
           <feColorMatrix
             type="hueRotate"
